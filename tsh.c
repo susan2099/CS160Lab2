@@ -231,7 +231,19 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
-    return 0;     /* not a builtin command */
+int ret = 0;
+if(!strcmp(arv[0], "quit")) {
+	exit(0);
+}
+else if(!strcmp(argv[0], "jobs")) {
+	listjobs(jobs);
+	ret = 1;
+}
+else if((!strcmp(argv[0], "bg")) || (!strcmp(argv[0], "fg"))) {
+	do_bgfg(argv);
+	ret = 1;
+}
+    return ret;     /* not a builtin command */
 }
 
 /* 
