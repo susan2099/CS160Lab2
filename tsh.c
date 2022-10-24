@@ -331,6 +331,14 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig) 
 {
+	pid_t thisPid = fgpid(jobs);
+
+	if (thisPid != 0){
+		kill(-thisPid,SIGINT);
+		printf("Job [%d] (%d) teminated by signal %d\n", pid2jid(thisPid), thisPid, sig);
+
+	}
+
     return;
 }
 
@@ -341,6 +349,15 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
+	pid_t thisPid = fgpid(jobs);
+
+	struct job_t *job;
+	if(thisPid != 0) {
+		job = getjobpid(jobs, thisPid);
+		job->state = ST;
+		kill(-thisPid, SIGSTP);
+		printf("Job [%d] (%d) stopped by signal %d\n". pid2jid(thisPid), thisPid, sig);
+	}
     return;
 }
 
