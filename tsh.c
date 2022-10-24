@@ -1,7 +1,7 @@
 /* 
  * tsh - A tiny shell program with job control
  * 
- * <Put your name and ID here>
+ * Susan Noori - 862147916
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -232,7 +232,7 @@ int parseline(const char *cmdline, char **argv)
 int builtin_cmd(char **argv) 
 {
 int ret = 0;
-if(!strcmp(arv[0], "quit")) {
+if(!strcmp(argv[0], "quit")) {
 	exit(0);
 }
 else if(!strcmp(argv[0], "jobs")) {
@@ -251,7 +251,50 @@ else if((!strcmp(argv[0], "bg")) || (!strcmp(argv[0], "fg"))) {
  */
 void do_bgfg(char **argv) 
 {
-    return;
+	if(argv[1] == NULL) {
+		printf("%s command requires PID or %%jobid argument\n", argv[0]);
+		return;
+	}
+
+	int isJid = (argv[1][0] == '%') ? 1 : 0;
+	char* idStr = (isJid) ? &argv[1][1] : argv[1];
+
+	int i;
+	for(i = 0; i < strlen(idStr); i++) {
+		if(!isdigit(idStr[i])) {
+			printf("%s argument mus be a PID or %%jobid\n", argv[0]);
+			return;
+		}
+	}
+
+	char* type = (isJid) ? "job" : "process";
+	int id = atoi(idStr);
+	struct job_t *job = (isJid) ? getjobjid(jobs, id) : getjobpid(jobs, id);
+	
+	if(job == NULL) {
+		if(isJid) {
+			printf("%s", argv[1]);
+		}
+		else {
+			printf("(%s)", argv[1]);
+		}
+		printf(": No such %s\n", type);
+		return;
+	}
+
+	kill(-job->pid, SIGCONT);
+	
+	int isBg = (strcmp(argv[0], "bg") == 0);
+
+	if(isBg) {
+		job->state = BG;
+		printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
+	}
+	else {
+		job->state = FG;
+		waitfg(job->pid);
+	}
+	return;
 }
 
 /* 
