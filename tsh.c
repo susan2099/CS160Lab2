@@ -189,7 +189,7 @@ void eval(char *cmdline)
 		// add child to job list
 		if ((pid = fork()) == 0)
 		{
-			setpgid(pid, 0); // each child process must have a unique process group ID so that our background children don't receive SIGINT (SIGTSTP) from the kernel when we type ctrl-c (ctrl-z) at the keyboard.
+			setpgid(0, 0); // each child process must have a unique process group ID so that our background children don't receive SIGINT (SIGTSTP) from the kernel when we type ctrl-c (ctrl-z) at the keyboard.
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 			if (execve(argv[0], argv, environ) < 0)
 			{
@@ -211,10 +211,14 @@ void eval(char *cmdline)
 			}
 			else
 			{
-				addjob(jobs, pid, 2, cmdline); // what is the 3rd param
-				sigprocmask(SIG_UNBLOCK, &mask, NULL);
-				printf("%d %s", pid, cmdline);
+				waitfg(pid);
 			}
+		}
+		else
+		{
+			addjob(jobs, pid, 2, cmdline); // what is the 3rd param
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+			printf("%d %s", pid, cmdline);
 		}
 	}
 
