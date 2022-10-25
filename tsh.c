@@ -177,13 +177,20 @@ void eval(char *cmdline)
 	char *argv[MAXARGS];
 	int bg;
 	pid_t pid;
+	sigset_t mask;
 
 	bg = parseline(cmdline, argv);
 
 	if (!builtin_command(argv))
 	{
+		sigemptyset(&mask);
+		sigaddset(&mask, SIGCHILD);
+		sigprocmask(SIG_BLOCK, &mask, NULL); // might have to change 3rd param (block sigchild singals before fork)
+		// add child to job list
 		if ((pid = fork()) == 0)
 		{
+			setpgid(pid, 0); // each child process must have a unique process group ID so that our background children don't receive SIGINT (SIGTSTP) from the kernel when we type ctrl-c (ctrl-z) at the keyboard.
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 			if (execve(argv[0], argv, environ) < 0)
 			{
 				printf("%s: Command not found.\n", argv[0]);
@@ -194,12 +201,18 @@ void eval(char *cmdline)
 		if (!bg)
 		{
 			int status;
+
+			addjob(jobs, pid, 1, cmdline); // what is the 3rd param
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+
 			if (waitpid(pid, &status, 0) < 0)
 			{
 				unix_error("waitfg: waitpid error");
 			}
 			else
 			{
+				addjob(jobs, pid, 2, cmdline); // what is the 3rd param
+				sigprocmask(SIG_UNBLOCK, &mask, NULL);
 				printf("%d %s", pid, cmdline);
 			}
 		}
