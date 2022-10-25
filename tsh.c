@@ -321,7 +321,18 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
-    return;
+	pid_t thisPid;
+	int thisStatus;
+	struct job_t *job;
+
+	while((thisPid = waitpid(-1, &thisStatus, WNOHANG)) > 0 ) {
+		if(WIFEXITED(thisStatus) || WIFSIGNALED(thisStatus)) { //if child terminated normally or child process exits from a raised signal 
+			deletejob(jobs, thisPid);
+		}
+		if(WIFSTOPPED(thisStatus)) { //if child stopped by a signal
+			job = getjobpid(jobs, thisPid);
+			job->state = ST;
+	}
 }
 
 /* 
@@ -335,7 +346,7 @@ void sigint_handler(int sig)
 
 	if (thisPid != 0){
 		kill(-thisPid,SIGINT);
-		printf("Job [%d] (%d) teminated by signal %d\n", pid2jid(thisPid), thisPid, sig);
+		printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(thisPid), thisPid, sig);
 
 	}
 
