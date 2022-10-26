@@ -335,7 +335,7 @@ void do_bgfg(char **argv)
 	{
 		if (!isdigit(idStr[i]))
 		{
-			printf("%s argument mus be a PID or %%jobid\n", argv[0]);
+			printf("%s: argument must be a PID or %%jobid\n", argv[0]);
 			return;
 		}
 	}
