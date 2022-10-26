@@ -201,29 +201,30 @@ void eval(char *cmdline)
 
 		if (!bg)
 		{
-			int status;
+			//int status;
 
-			addjob(jobs, pid, 1, cmdline); // what is the 3rd param
+			addjob(jobs, pid, FG, cmdline); // what is the 3rd param
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+			waitfg(pid);
 
-			if (waitpid(pid, &status, 0) < 0)
+			/*if (waitpid(pid, &status, 0) < 0)
 			{
 				unix_error("waitfg: waitpid error");
 			}
 			else
 			{
 				waitfg(pid);
-			}
+			}*/
 		}
 		else
 		{
-			addjob(jobs, pid, 2, cmdline); // what is the 3rd param
+			addjob(jobs, pid, BG, cmdline); // what is the 3rd param
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
-			printf("%d %s", pid, cmdline);
+			printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
 		}
 	}
 
-	return;
+	//return;
 }
 
 /*
@@ -405,14 +406,19 @@ void sigchld_handler(int sig)
 	int thisStatus;
 	struct job_t *job;
 
-	while ((thisPid = waitpid(-1, &thisStatus, WNOHANG)) > 0)
+	while ((thisPid = waitpid(-1, &thisStatus, WNOHANG | WUNTRACED)) > 0)
 	{
-		if (WIFEXITED(thisStatus) || WIFSIGNALED(thisStatus))
+		if (WIFEXITED(thisStatus))
 		{ // if child terminated normally or child process exits from a raised signal
 			deletejob(jobs, thisPid);
 		}
-		if (WIFSTOPPED(thisStatus))
+		else if(WIFSIGNALED(thisStatus)) {
+			printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(thisPid), thisPid, WTERMSIG(thisStatus));
+			deletejob(jobs, thisPid);
+		}
+		else if(WIFSTOPPED(thisStatus))
 		{ // if child stopped by a signal
+			printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(thisPid), thisPid, WSTOPSIG(thisStatus));
 			job = getjobpid(jobs, thisPid);
 			job->state = ST;
 		}
@@ -427,14 +433,8 @@ void sigchld_handler(int sig)
 	void sigint_handler(int sig)
 	{
 		pid_t thisPid = fgpid(jobs);
+		kill(-thisPid, SIGINT);
 
-		if (thisPid != 0)
-		{
-			kill(-thisPid, SIGINT);
-			printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(thisPid), thisPid, sig);
-		}
-
-		return;
 	}
 
 	/*
@@ -445,16 +445,8 @@ void sigchld_handler(int sig)
 	void sigtstp_handler(int sig)
 	{
 		pid_t thisPid = fgpid(jobs);
-
-		struct job_t *job;
-		if (thisPid != 0)
-		{
-			job = getjobpid(jobs, thisPid);
-			job->state = ST;
-			kill(-thisPid, SIGTSTP);
-			printf("Job [%d] (%d) stopped by signal %d\n",pid2jid(thisPid), thisPid, sig);
-		}
-		return;
+		kill(-thisPid, SIGTSTP);
+		
 	}
 
 	/*********************
