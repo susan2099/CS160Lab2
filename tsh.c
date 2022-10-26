@@ -3,6 +3,7 @@
  *
  * Susan Noori - 862147916
  * Richard Jeong - 862170181
+ * Diana Lopez - 862129785
  */
 #include <stdio.h>
 #include <stdlib.h>
