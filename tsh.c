@@ -182,10 +182,10 @@ void eval(char *cmdline)
 
 	bg = parseline(cmdline, argv);
 
-	if (!builtin_command(argv))
+	if (!builtin_cmd(argv))
 	{
 		sigemptyset(&mask);
-		sigaddset(&mask, SIGCHILD);
+		sigaddset(&mask, SIGCHLD);
 		sigprocmask(SIG_BLOCK, &mask, NULL); // might have to change 3rd param (block sigchild singals before fork)
 		// add child to job list
 		if ((pid = fork()) == 0)
@@ -299,6 +299,7 @@ int builtin_cmd(char **argv)
 	if (!strcmp(argv[0], "quit"))
 	{
 		exit(0);
+		ret = 1;
 	}
 	else if (!strcmp(argv[0], "jobs"))
 	{
@@ -309,6 +310,9 @@ int builtin_cmd(char **argv)
 	{
 		do_bgfg(argv);
 		ret = 1;
+	}
+	else {
+		ret = 0;
 	}
 	return ret; /* not a builtin command */
 }
@@ -413,6 +417,7 @@ void sigchld_handler(int sig)
 			job->state = ST;
 		}
 	}
+}
 
 	/*
 	 * sigint_handler - The kernel sends a SIGINT to the shell whenver the
@@ -446,8 +451,8 @@ void sigchld_handler(int sig)
 		{
 			job = getjobpid(jobs, thisPid);
 			job->state = ST;
-			kill(-thisPid, SIGSTP);
-			printf("Job [%d] (%d) stopped by signal %d\n".pid2jid(thisPid), thisPid, sig);
+			kill(-thisPid, SIGTSTP);
+			printf("Job [%d] (%d) stopped by signal %d\n",pid2jid(thisPid), thisPid, sig);
 		}
 		return;
 	}
